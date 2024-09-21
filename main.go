@@ -7,19 +7,18 @@ import (
 	"go-auth/routes"
 
 	"github.com/gofiber/fiber/v2"
-	"gorm.io/gorm"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 )
-
-type Product struct {
-    gorm.Model
-    Code  string
-    Price uint
-  }
  
 func main() {
     database.Connect()
 
     app := fiber.New()
+
+    app.Use(cors.New(cors.Config{
+      AllowCredentials: true,
+      AllowOrigins:"http://localhost:3000",
+    }))
 
     routes.Setup(app)
 
