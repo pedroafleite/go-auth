@@ -13,6 +13,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+var mySigningKey = []byte("AllYourBase")
+
 func Register(c *fiber.Ctx) error {
 	var data map[string]string
 
@@ -64,8 +66,6 @@ func Login(c *fiber.Ctx) error {
 		ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 24)),
 	})
 
-	mySigningKey := []byte("AllYourBase")
-
 	token, err := claims.SignedString(mySigningKey)
 
 	fmt.Printf("%v %v", token, err)
@@ -90,4 +90,36 @@ func Login(c *fiber.Ctx) error {
 		"message": "success",
 	})
 
+}
+
+func User(c *fiber.Ctx) error {
+	cookie := c.Cookies("jwt")
+
+	token, err := jwt.ParseWithClaims(cookie, jwt.MapClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return []byte(mySigningKey), nil
+	})
+
+	if err != nil{
+		c.Status(fiber.StatusUnauthorized)
+		return c.JSON(fiber.Map{
+			"message": "unauthenticated",
+		})
+	}
+
+	claims := token.Claims.(jwt.MapClaims)
+
+	var user models.User
+
+	issuer, err := claims.GetIssuer()
+
+	if err != nil{
+		c.Status(fiber.StatusNotFound)
+		return c.JSON(fiber.Map{
+			"message": "user not found",
+		})
+	}
+
+	database.DB.Where("id = ?", issuer).First(&user)
+
+	return c.JSON(user)
 }
